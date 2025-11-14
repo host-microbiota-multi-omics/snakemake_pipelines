@@ -143,6 +143,37 @@ rule maxbin2:
         fi
         """
 
+rule semibin2:
+    input:
+        assembly=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna",
+        bam=lambda wildcards: [
+            f"{OUTPUT_DIR}/cataloging/bowtie2/{wildcards.assembly}/{sample}.bam"
+            for sample in ASSEMBLY_TO_SAMPLES[wildcards.assembly]
+            ]
+    output:
+        f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/contig_bins.tsv"
+    params:
+        semibin2_module={SEMIBIN2_MODULE},
+        hmmer_module={HMMER_MODULE},
+        bedtools_module={BEDTOOLS_MODULE},
+        outdir=f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}",
+        assembly_size_mb=lambda wildcards, input: int(Path(input.assembly).stat().st_size / (1024*1024))
+    threads: 8
+    resources:
+        mem_mb=lambda wildcards, input, attempt: min(1000*1024,max(8*1024, int(input.size_mb * 30) * 2 ** (attempt - 1))),
+        runtime=lambda wildcards, input, attempt: min(20000,max(15, int(input.size_mb / 2) * 2 ** (attempt - 1)))
+    message: "Binning contigs from assembly {wildcards.assembly} using semibin2..."
+    shell:
+        """
+        if (( {params.assembly_size_mb} < 10 )); then
+            echo "Assembly is smaller than 10 MB, skipping semibin2..."
+            touch {output}
+        else
+            module load {params.semibin2_module} {params.bedtools_module} {params.hmmer_module}
+            SemiBin2 single_easy_bin -i {input.assembly} -b {input.bam} -o {params.outdir} -m 1500 -t {threads} --compression none
+        fi
+        """
+
 rule semibin2_table:
     input:
         f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/contig_bins.tsv"
