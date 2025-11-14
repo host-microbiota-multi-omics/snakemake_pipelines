@@ -1,0 +1,13 @@
+# Snakemake attributes
+latency-wait: 60
+keep-going: true
+rerun-incomplete: true
+
+# Modules
+FASTP_MODULE: "fastp/0.23.4"
+BOWTIE2_MODULE: "bowtie2/2.4.2"
+SAMTOOLS_MODULE: "samtools/1.21"
+SINGLEM_MODULE: "singlem/0.19.0"
+
+# Databases
+SINGLEM_DB: "/maps/datasets/globe_databases/singlem/4.3.0/S4.3.0.GTDB_r220.metapackage_20240523.smpkg.zb"
