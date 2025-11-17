@@ -1,9 +1,9 @@
 configfile: "1_preprocessing.yaml"
 
 # Config variables
-WORKDIR = config.get("workdir", None)
-READS = config.get("reads", None)
-REFERENCE = config.get("reference", None)
+WORKDIR = config["workdir"]
+READS = config["reads"]
+REFERENCE = config["reference"]
 
 rule all:
     expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
