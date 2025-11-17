@@ -1,24 +1,24 @@
 configfile: "1_preprocessing.yaml"
 
+# Config variables
+WORKDIR = config.get("workdir", None)
 READS = config.get("reads", None)
 REFERENCE = config.get("reference", None)
 
-
-
 rule all:
-    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
-    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
-    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
+    expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
+    expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
+    expand(f"{WORKDIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
 
 rule fastp:
     input:
         r1=f"{READS}/{{sample}}_1.fq.gz",
         r2=f"{READS}/{{sample}}_2.fq.gz"
     output:
-        r1=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
-        r2=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_2.fq.gz",
-        html=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}.html",
-        json=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}.json"
+        r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz",
+        html=f"{WORKDIR}/preprocessing/fastp/{{sample}}.html",
+        json=f"{WORKDIR}/preprocessing/fastp/{{sample}}.json"
     params:
         q=qualified_quality_phred=config.get("qualified_quality_phred", None)
         l=length_required=config.get("length_required", None)
@@ -29,7 +29,7 @@ rule fastp:
     message: "Quality-filtering sample {wildcards.sample}..."
     shell:
         """
-        module load {params.fastp_module}
+        module load fastp/0.23.4
         fastp \
             --in1 {input.r1} --in2 {input.r2} \
             --out1 {output.r1} --out2 {output.r2} \
@@ -51,11 +51,11 @@ rule fastp:
 
 rule reference_index:
     input:
-        f"{OUTPUT_DIR}/data/references/{{reference}}.fna"
+        REFERENCE
     output:
-        index=f"{OUTPUT_DIR}/data/references/{{reference}}.rev.1.bt2"
+        index=f"{WORKDIR}/reference/{{reference}}.rev.1.bt2"
     params:
-        basename=f"{OUTPUT_DIR}/data/references/{{reference}}"
+        basename=f"{WORKDIR}/reference/{{reference}}"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
@@ -63,7 +63,7 @@ rule reference_index:
     message: "Indexing reference genome {wildcards.reference}..."
     shell:
         """
-        module load {params.bowtie2_module}
+        module load bowtie2/2.4.2
         bowtie2-build {input} {params.basename}
         cat {input} > {params.basename}.fna
         """
@@ -74,15 +74,15 @@ rule reference_index:
 rule reference_map:
     input:
         index=lambda wildcards: expand(
-            f"{OUTPUT_DIR}/data/references/{{reference}}.rev.1.bt2",
+            f"{WORKDIR}/reference/{{reference}}.rev.1.bt2",
             reference=[SAMPLE_TO_REFERENCE[wildcards.sample]]
         ),
-        r1=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
-        r2=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_2.fq.gz"
+        r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz"
     output:
-        f"{OUTPUT_DIR}/preprocessing/bowtie2/{{sample}}.bam"
+        f"{WORKDIR}/preprocessing/bowtie2/{{sample}}.bam"
     params:
-        basename=lambda wildcards: f"{OUTPUT_DIR}/data/references/{SAMPLE_TO_REFERENCE[wildcards.sample]}"
+        basename=lambda wildcards: f"{WORKDIR}/reference/{SAMPLE_TO_REFERENCE[wildcards.sample]}"
     threads: 16
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -90,7 +90,7 @@ rule reference_map:
     message: "Mapping {wildcards.sample} against reference genome..."
     shell:
         """
-        module load {params.bowtie2_module} {params.samtools_module}
+        module load bowtie2/2.4.2 samtools/1.21
         bowtie2 -x {params.basename} -1 {input.r1} -2 {input.r2} -p {threads} | samtools view -bS - | samtools sort -o {output}
         """
 
@@ -101,10 +101,10 @@ rule samtools_stats:
     input:
         rules.reference_map.output
     output:
-        bai      = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.bam.bai",
-        flagstat = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.flagstat.txt",
-        idxstats = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.idxstats.txt",
-        stats    = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.stats.txt"
+        bai      = f"{WORKDIR}/preprocessing/samtools/{{sample}}.bam.bai",
+        flagstat = f"{WORKDIR}/preprocessing/samtools/{{sample}}.flagstat.txt",
+        idxstats = f"{WORKDIR}/preprocessing/samtools/{{sample}}.idxstats.txt",
+        stats    = f"{WORKDIR}/preprocessing/samtools/{{sample}}.stats.txt"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 2) * 2 ** (attempt - 1)),
@@ -112,7 +112,7 @@ rule samtools_stats:
     message: "Generating mapping stats for {wildcards.sample}..."
     shell:
         """
-        module load {params.samtools_module}
+        module load samtools/1.21
         samtools index {input} {output.bai}
         samtools flagstat {input} > {output.flagstat}
         samtools idxstats {input} > {output.idxstats}
@@ -124,11 +124,11 @@ rule samtools_stats:
 
 rule split_reads:
     input:
-        f"{OUTPUT_DIR}/preprocessing/bowtie2/{{sample}}.bam"
+        f"{WORKDIR}/preprocessing/bowtie2/{{sample}}.bam"
     output:
-        r1=f"{OUTPUT_DIR}/preprocessing/{{sample}}_1.fq.gz",
-        r2=f"{OUTPUT_DIR}/preprocessing/{{sample}}_2.fq.gz",
-        bam=f"{OUTPUT_DIR}/preprocessing/{{sample}}.bam"
+        r1=f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz",
+        bam=f"{WORKDIR}/preprocessing/{{sample}}.bam"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -136,11 +136,52 @@ rule split_reads:
     message: "Extracting metagenomic reads of {wildcards.sample}..."
     shell:
         """
-        module load {params.bowtie2_module} {params.samtools_module}
+        module load bowtie2/2.4.2 samtools/1.21
         samtools view -b -f12 -@ {threads} {input} | samtools fastq -@ {threads} -1 {output.r1} -2 {output.r2} -
         samtools view -b -f12 -@ {threads} {input} | samtools view -c - > {output.metareads}
         samtools view -f12 -@ {threads} {input} | awk '{{sum += length($10)}} END {{print sum}}' > {output.metabases}
         samtools view -b -F12 -@ {threads} {input} | samtools sort -@ {threads} -o {output.bam} -
         samtools view -b -F12 -@ {threads} {input} | samtools view -c - > {output.hostreads}
         samtools view -F12 -@ {threads} {input} | awk '{{sum += length($10)}} END {{print sum}}' > {output.hostbases}
+        """
+
+rule singlem:
+    input: 
+        r1=f"{WORKDIR}/preprocessing/singlem/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz"
+    output:
+        f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
+    params:
+        siglemdir = f"{WORKDIR}/preprocessing/singlem/"
+    threads: 1
+    shell:
+        """
+        module load singlem/0.19.0
+        export SINGLEM_METAPACKAGE_PATH=/maps/datasets/globe_databases/singlem/5.4.0/S5.4.0.GTDB_r226.metapackage_20250331.smpkg.zb
+        mkdir -p {params.siglemdir}
+        rm -rf {params.workdir}
+        singlem pipe \
+            -1 {input.r1} \
+            -2 {input.r2} \
+            -p {output}
+        """
+
+rule spf:
+    input: 
+        r1=f"{WORKDIR}/preprocessing/singlem/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz"
+        profile=f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
+    output:
+        f"{OUTDIR}/singlem/{{sample}}.fraction"
+    params:
+        workdir = lambda wc: f"{OUTDIR}/singlem/{wc.sample}"
+    threads: 1
+    shell:
+        """
+        module load singlem/0.19.0
+        export SINGLEM_METAPACKAGE_PATH=/maps/datasets/globe_databases/singlem/5.4.0/S5.4.0.GTDB_r226.metapackage_20250331.smpkg.zb
+        singlem microbial_fraction \
+            -1 {input.r1} \
+            -2 {input.r2} \
+            -p {input.profile} > {output}
         """
