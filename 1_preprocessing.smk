@@ -1,18 +1,27 @@
-configfile: "workflow/config.yaml"
+configfile: "1_preprocessing.yaml"
 
+READS = config.get("reads", None)
 REFERENCE = config.get("reference", None)
+
+
+
+rule all:
+    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
+    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
+    expand(f"{OUTPUT_DIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
 
 rule fastp:
     input:
-        r1=f"{OUTPUT_DIR}/data/reads/{{sample}}_1.fq.gz",
-        r2=f"{OUTPUT_DIR}/data/reads/{{sample}}_2.fq.gz"
+        r1=f"{READS}/{{sample}}_1.fq.gz",
+        r2=f"{READS}/{{sample}}_2.fq.gz"
     output:
         r1=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
         r2=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}_2.fq.gz",
         html=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}.html",
         json=f"{OUTPUT_DIR}/preprocessing/fastp/{{sample}}.json"
     params:
-        fastp_module={FASTP_MODULE}
+        q=qualified_quality_phred=config.get("qualified_quality_phred", None)
+        l=length_required=config.get("length_required", None)
     threads: 4
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -28,8 +37,8 @@ rule fastp:
             --trim_poly_x \
             --low_complexity_filter \
             --n_base_limit 5 \
-            --qualified_quality_phred 20 \
-            --length_required 60 \
+            --qualified_quality_phred {params.q} \
+            --length_required {params.l} \
             --thread {threads} \
             --html {output.html} \
             --json {output.json} \
@@ -46,7 +55,6 @@ rule reference_index:
     output:
         index=f"{OUTPUT_DIR}/data/references/{{reference}}.rev.1.bt2"
     params:
-        bowtie2_module={BOWTIE2_MODULE},
         basename=f"{OUTPUT_DIR}/data/references/{{reference}}"
     threads: 1
     resources:
@@ -74,8 +82,6 @@ rule reference_map:
     output:
         f"{OUTPUT_DIR}/preprocessing/bowtie2/{{sample}}.bam"
     params:
-        bowtie2_module={BOWTIE2_MODULE},
-        samtools_module={SAMTOOLS_MODULE},
         basename=lambda wildcards: f"{OUTPUT_DIR}/data/references/{SAMPLE_TO_REFERENCE[wildcards.sample]}"
     threads: 16
     resources:
@@ -99,8 +105,6 @@ rule samtools_stats:
         flagstat = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.flagstat.txt",
         idxstats = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.idxstats.txt",
         stats    = f"{OUTPUT_DIR}/preprocessing/samtools/{{sample}}.stats.txt"
-    params:
-        samtools_module={SAMTOOLS_MODULE}
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 2) * 2 ** (attempt - 1)),
@@ -122,16 +126,9 @@ rule split_reads:
     input:
         f"{OUTPUT_DIR}/preprocessing/bowtie2/{{sample}}.bam"
     output:
-        r1=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}_1.fq.gz",
-        r2=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}_2.fq.gz",
-        metareads=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}.metareads",
-        metabases=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}.metabases",
-        bam=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}.bam",
-        hostreads=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}.hostreads",
-        hostbases=f"{OUTPUT_DIR}/preprocessing/final/{{sample}}.hostbases"
-    params:
-        bowtie2_module={BOWTIE2_MODULE},
-        samtools_module={SAMTOOLS_MODULE}
+        r1=f"{OUTPUT_DIR}/preprocessing/{{sample}}_1.fq.gz",
+        r2=f"{OUTPUT_DIR}/preprocessing/{{sample}}_2.fq.gz",
+        bam=f"{OUTPUT_DIR}/preprocessing/{{sample}}.bam"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
