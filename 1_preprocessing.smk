@@ -5,10 +5,13 @@ WORKDIR = config["workdir"]
 READS = config["reads"]
 REFERENCE = config["reference"]
 
+# List genome and target wildcards
+SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
+
 rule all:
     input:
         expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
-        expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
+        expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES),
         expand(f"{WORKDIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
 
 rule fastp:
@@ -21,8 +24,8 @@ rule fastp:
         html=f"{WORKDIR}/preprocessing/fastp/{{sample}}.html",
         json=f"{WORKDIR}/preprocessing/fastp/{{sample}}.json"
     params:
-        q=qualified_quality_phred=config.get("qualified_quality_phred", None)
-        l=length_required=config.get("length_required", None)
+        q=config["qualified_quality_phred"],
+        l=config["length_required"]
     threads: 4
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -170,12 +173,12 @@ rule singlem:
 rule spf:
     input: 
         r1=f"{WORKDIR}/preprocessing/singlem/{{sample}}_1.fq.gz",
-        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz"
+        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz",
         profile=f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
     output:
-        f"{OUTDIR}/singlem/{{sample}}.fraction"
+        f"{WORKDIR}/preprocessing/singlem/{{sample}}.fraction"
     params:
-        workdir = lambda wc: f"{OUTDIR}/singlem/{wc.sample}"
+        workdir = lambda wc: f"{WORKDIR}/preprocessing/singlem/{wc.sample}"
     threads: 1
     shell:
         """
