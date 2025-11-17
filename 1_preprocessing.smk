@@ -6,9 +6,10 @@ READS = config["reads"]
 REFERENCE = config["reference"]
 
 rule all:
-    expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
-    expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
-    expand(f"{WORKDIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
+    input:
+        expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
+        expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES)
+        expand(f"{WORKDIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
 
 rule fastp:
     input:
