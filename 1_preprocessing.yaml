@@ -1,3 +1,9 @@
 #fastp
 qualified_quality_phred: int
 length_required: int
+
+#bowtie2
+extension: int
+seeeds: int
+missmatches: int
+substrings: int
