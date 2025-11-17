@@ -1,3 +1,5 @@
+import os
+
 configfile: "1_preprocessing.yaml"
 
 # Config variables
@@ -84,7 +86,7 @@ rule reference_map:
     output:
         f"{WORKDIR}/preprocessing/bowtie2/{{sample}}.bam"
     params:
-        basename=REFERENCE
+        basename = f"{WORKDIR}/reference/{REF_BASENAME}"
     threads: 16
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -140,17 +142,13 @@ rule split_reads:
         """
         module load bowtie2/2.4.2 samtools/1.21
         samtools view -b -f12 -@ {threads} {input} | samtools fastq -@ {threads} -1 {output.r1} -2 {output.r2} -
-        samtools view -b -f12 -@ {threads} {input} | samtools view -c - > {output.metareads}
-        samtools view -f12 -@ {threads} {input} | awk '{{sum += length($10)}} END {{print sum}}' > {output.metabases}
         samtools view -b -F12 -@ {threads} {input} | samtools sort -@ {threads} -o {output.bam} -
-        samtools view -b -F12 -@ {threads} {input} | samtools view -c - > {output.hostreads}
-        samtools view -F12 -@ {threads} {input} | awk '{{sum += length($10)}} END {{print sum}}' > {output.hostbases}
         """
 
 rule singlem:
     input: 
-        r1=f"{WORKDIR}/preprocessing/singlem/{{sample}}_1.fq.gz",
-        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz"
+        r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz"
     output:
         f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
     params:
@@ -161,7 +159,6 @@ rule singlem:
         module load singlem/0.19.0
         export SINGLEM_METAPACKAGE_PATH=/maps/datasets/globe_databases/singlem/5.4.0/S5.4.0.GTDB_r226.metapackage_20250331.smpkg.zb
         mkdir -p {params.siglemdir}
-        rm -rf {params.workdir}
         singlem pipe \
             -1 {input.r1} \
             -2 {input.r2} \
@@ -170,8 +167,8 @@ rule singlem:
 
 rule spf:
     input: 
-        r1=f"{WORKDIR}/preprocessing/singlem/{{sample}}_1.fq.gz",
-        r2=f"{WORKDIR}/preprocessing/singlem/{{sample}}_2.fq.gz",
+        r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz",
         profile=f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
     output:
         f"{WORKDIR}/preprocessing/singlem/{{sample}}.fraction"
