@@ -1,1 +1,3 @@
-
+#fastp
+qualified_quality_phred: int
+length_required: int
