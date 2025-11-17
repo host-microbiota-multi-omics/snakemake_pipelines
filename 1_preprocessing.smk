@@ -4,6 +4,7 @@ configfile: "1_preprocessing.yaml"
 WORKDIR = config["workdir"]
 READS = config["reads"]
 REFERENCE = config["reference"]
+REF_BASENAME = os.path.splitext(os.path.basename(REFERENCE))[0]
 
 # List genome and target wildcards
 SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
@@ -57,9 +58,9 @@ rule reference_index:
     input:
         REFERENCE
     output:
-        index=f"{WORKDIR}/reference/{{reference}}.rev.1.bt2"
+        index = f"{WORKDIR}/reference/{REF_BASENAME}.rev.1.bt2"
     params:
-        basename=f"{WORKDIR}/reference/{{reference}}"
+        basename = f"{WORKDIR}/reference/{REF_BASENAME}"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
@@ -77,16 +78,13 @@ rule reference_index:
 
 rule reference_map:
     input:
-        index=lambda wildcards: expand(
-            f"{WORKDIR}/reference/{{reference}}.rev.1.bt2",
-            reference=[SAMPLE_TO_REFERENCE[wildcards.sample]]
-        ),
+        index = rules.reference_index.output.index,
         r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
         r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz"
     output:
         f"{WORKDIR}/preprocessing/bowtie2/{{sample}}.bam"
     params:
-        basename=lambda wildcards: f"{WORKDIR}/reference/{SAMPLE_TO_REFERENCE[wildcards.sample]}"
+        basename=REFERENCE
     threads: 16
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
