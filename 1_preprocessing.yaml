@@ -1,3 +1,7 @@
+#data
+reads: path
+reference: path
+
 #fastp
 qualified_quality_phred: int
 length_required: int
