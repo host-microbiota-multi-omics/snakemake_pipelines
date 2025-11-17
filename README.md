@@ -11,6 +11,7 @@ wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pip
 ```
 
 ```sh
+screen -S hmmo
 module load snakemake/9.9.0
 snakemake -s {WORKDIR} --cores 8 --profile config.yaml
 ```
