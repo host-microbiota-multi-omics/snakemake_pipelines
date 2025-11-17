@@ -62,6 +62,7 @@ rule reference_index:
     output:
         index = f"{WORKDIR}/reference/{REF_BASENAME}.rev.1.bt2"
     params:
+        refdir = f"{WORKDIR}/reference/"
         basename = f"{WORKDIR}/reference/{REF_BASENAME}"
     threads: 1
     resources:
@@ -71,6 +72,7 @@ rule reference_index:
     shell:
         """
         module load bowtie2/2.4.2
+        cp {input} {params.refdir}
         bowtie2-build {input} {params.basename}
         cat {input} > {params.basename}.fna
         """
