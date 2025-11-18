@@ -5,8 +5,6 @@ configfile: "1_preprocessing.yaml"
 # Config variables
 WORKDIR = config["workdir"]
 BAMS = config["bams"]
-REFERENCE = config["reference"]
-REF_BASENAME = os.path.splitext(os.path.basename(REFERENCE))[0]
 
 # List genome and target wildcards
 SAMPLES, = glob_wildcards(f"{BAMS}/{{sample}}.bam")
