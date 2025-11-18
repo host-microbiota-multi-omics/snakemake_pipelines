@@ -1,49 +1,54 @@
+import os
+
+configfile: "3_microbial_metagenomics.yaml"
+
+# Config variables
+WORKDIR = config["workdir"]
+READS = config["reads"]
+
+# List genome and target wildcards
+SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
+
 
 rule assembly:
     input:
-        r1=lambda wildcards: [f"{OUTPUT_DIR}/preprocessing/final/{sample}_1.fq.gz" for sample in ASSEMBLY_TO_SAMPLES[wildcards.assembly]],
-        r2=lambda wildcards: [f"{OUTPUT_DIR}/preprocessing/final/{sample}_2.fq.gz" for sample in ASSEMBLY_TO_SAMPLES[wildcards.assembly]]
+        r1=f"{READS}/{{sample}}_1.fq.gz",
+        r2=f"{READS}/{{sample}}_2.fq.gz"
     output:
-        f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna"
+        f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna"
     params:
-        megahit_module={MEGAHIT_MODULE},
-        outputdir=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}"
+        outputdir=f"{WORKDIR}/metagenomics/megahit/{{sample}}"
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: min(1020*1024,max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1))),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 20) * 2 ** (attempt - 1))
-    message: "Assembling {wildcards.assembly}..."
+    message: "Assembling {wildcards.sample}..."
     shell:
         """
         module load {params.megahit_module}
         rm -rf {params.outputdir}
 
-        # Convert input list to a comma-separated string
-        R1_FILES=$(echo {input.r1} | tr ' ' ',')
-        R2_FILES=$(echo {input.r2} | tr ' ' ',')
-
         megahit \
             -t {threads} \
             --verbose \
             --min-contig-len 1500 \
-            -1 $R1_FILES -2 $R2_FILES \
+            -1 {input.r1} -2 {input.r2} \
             -o {params.outputdir}
         mv {params.outputdir}/final.contigs.fa {output}
         """
 
 rule assembly_index:
     input:
-        f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna"
+        f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna"
     output:
-        index=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.rev.2.bt2"
+        index=f"{WORKDIR}/metagenomics/megahit/{{sample}}.rev.2.bt2"
     params:
-        bowtie2_module={BOWTIE2_MODULE},
-        basename=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}"
+        basename=f"{WORKDIR}/metagenomics/megahit/{{sample}}"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 5) * 2 ** (attempt - 1))
-    message: "Indexing assembly {wildcards.assembly}..."
+    message: "Indexing assembly {wildcards.sample}..."
     shell:
         """
         module load {params.bowtie2_module}
@@ -52,20 +57,18 @@ rule assembly_index:
 
 rule assembly_map:
     input:
-        index=lambda wildcards: f"{OUTPUT_DIR}/cataloging/megahit/{wildcards.assembly}/{wildcards.assembly}.rev.2.bt2",
-        r1=lambda wildcards: f"{OUTPUT_DIR}/preprocessing/final/{wildcards.sample}_1.fq.gz",
-        r2=lambda wildcards: f"{OUTPUT_DIR}/preprocessing/final/{wildcards.sample}_2.fq.gz"
+        index=f"{WORKDIR}/metagenomics/megahit/{{sample}}.rev.2.bt2",
+        r1=f"{READS}/{{sample}}_1.fq.gz",
+        r2=f"{READS}/{{sample}}_2.fq.gz"
     output:
-        f"{OUTPUT_DIR}/cataloging/bowtie2/{{assembly}}/{{sample}}.bam"
+        f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam"
     params:
-        bowtie2_module={BOWTIE2_MODULE},
-        samtools_module={SAMTOOLS_MODULE},
-        basename=lambda wildcards: f"{OUTPUT_DIR}/cataloging/megahit/{wildcards.assembly}/{wildcards.assembly}"
+        basename=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 3) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 5) * 2 ** (attempt - 1))
-    message: "Mapping {wildcards.sample} reads to assembly {wildcards.assembly}..."
+    message: "Mapping {wildcards.sample} reads to assembly..."
     shell:
         """
         module load {params.bowtie2_module} {params.samtools_module}
@@ -74,15 +77,10 @@ rule assembly_map:
 
 rule assembly_map_depth:
     input:
-        lambda wildcards: [
-            f"{OUTPUT_DIR}/cataloging/bowtie2/{wildcards.assembly}/{sample}.bam"
-            for sample in ASSEMBLY_TO_SAMPLES[wildcards.assembly]
-        ]
+        f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam"
     output:
-        metabat2=f"{OUTPUT_DIR}/cataloging/bowtie2/{{assembly}}_metabat.depth",
-        maxbin2=f"{OUTPUT_DIR}/cataloging/bowtie2/{{assembly}}_maxbin.depth"
-    params:
-        metabat2_module={METABAT2_MODULE}
+        metabat2=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_metabat.depth",
+        maxbin2=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_maxbin.depth"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb) * 2 ** (attempt - 1)),
@@ -97,17 +95,17 @@ rule assembly_map_depth:
 
 rule metabat2:
     input:
-        assembly=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna",
-        depth=f"{OUTPUT_DIR}/cataloging/bowtie2/{{assembly}}_metabat.depth"
+        assembly=f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna",
+        depth=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_metabat.depth"
     output:
-        f"{OUTPUT_DIR}/cataloging/metabat2/{{assembly}}/{{assembly}}.tsv"
+        f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv"
     params:
         metabat2_module={METABAT2_MODULE}
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 50) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 5) * 2 ** (attempt - 1))
-    message: "Binning contigs from assembly {wildcards.assembly} using metabat2..."
+    message: "Binning contigs from assembly {wildcards.sample} using metabat2..."
     shell:
         """
         module load {params.metabat2_module}
@@ -116,20 +114,18 @@ rule metabat2:
 
 rule maxbin2:
     input:
-        assembly=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna",
-        depth=f"{OUTPUT_DIR}/cataloging/bowtie2/{{assembly}}_maxbin.depth"
+        assembly=f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna",
+        depth=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_maxbin.depth"
     output:
-        f"{OUTPUT_DIR}/cataloging/maxbin2/{{assembly}}/{{assembly}}.summary"
+         f"{WORKDIR}/metagenomics/maxbin2/{{sample}}.summary"
     params:
-        maxbin2_module={MAXBIN2_MODULE},
-        hmmer_module={HMMER_MODULE},
-        basename=f"{OUTPUT_DIR}/cataloging/maxbin2/{{assembly}}/{{assembly}}",
+        basename=f"{WORKDIR}/metagenomics/maxbin2/{{sample}}",
         assembly_size_mb=lambda wildcards, input: int(Path(input.assembly).stat().st_size / (1024*1024))
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 50) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 3) * 2 ** (attempt - 1))
-    message: "Binning contigs from assembly {wildcards.assembly} using maxbin2..."
+    message: "Binning contigs from assembly {wildcards.sample} using maxbin2..."
     shell:
         """
         if (( {params.assembly_size_mb} < 10 )); then
@@ -145,24 +141,18 @@ rule maxbin2:
 
 rule semibin2:
     input:
-        assembly=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna",
-        bam=lambda wildcards: [
-            f"{OUTPUT_DIR}/cataloging/bowtie2/{wildcards.assembly}/{sample}.bam"
-            for sample in ASSEMBLY_TO_SAMPLES[wildcards.assembly]
-            ]
+        assembly=f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna",
+        bam=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam"
     output:
-        f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/contig_bins.tsv"
+        f"{WORKDIR}/metagenomics/semibin2/{{sample}}/contig_bins.tsv"
     params:
-        semibin2_module={SEMIBIN2_MODULE},
-        hmmer_module={HMMER_MODULE},
-        bedtools_module={BEDTOOLS_MODULE},
-        outdir=f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}",
+        outdir=f"{WORKDIR}/metagenomics/semibin2/{{sample}}",
         assembly_size_mb=lambda wildcards, input: int(Path(input.assembly).stat().st_size / (1024*1024))
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: min(1000*1024,max(8*1024, int(input.size_mb * 30) * 2 ** (attempt - 1))),
         runtime=lambda wildcards, input, attempt: min(20000,max(15, int(input.size_mb / 2) * 2 ** (attempt - 1)))
-    message: "Binning contigs from assembly {wildcards.assembly} using semibin2..."
+    message: "Binning contigs from assembly {wildcards.sample} using semibin2..."
     shell:
         """
         if (( {params.assembly_size_mb} < 10 )); then
@@ -176,12 +166,11 @@ rule semibin2:
 
 rule semibin2_table:
     input:
-        f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/contig_bins.tsv"
+         f"{WORKDIR}/metagenomics/semibin2/{{sample}}/contig_bins.tsv"
     output:
-        f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/{{assembly}}.tsv"
+        f"{WORKDIR}/metagenomics/semibin2/{{sample}}.tsv"
     params:
-        package_dir={PACKAGE_DIR},
-        fastadir=f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/output_bins"
+        fastadir=f"{WORKDIR}/metagenomics/semibin2/{{sample}}/output_bins"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(1*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
@@ -203,18 +192,18 @@ def row_count(path):
 
 checkpoint binette:
     input:
-        metabat2=f"{OUTPUT_DIR}/cataloging/metabat2/{{assembly}}/{{assembly}}.tsv",
-        maxbin2=f"{OUTPUT_DIR}/cataloging/maxbin2/{{assembly}}/{{assembly}}.tsv",
-        semibin2=f"{OUTPUT_DIR}/cataloging/semibin2/{{assembly}}/{{assembly}}.tsv",
-        fasta=f"{OUTPUT_DIR}/cataloging/megahit/{{assembly}}/{{assembly}}.fna"
+        metabat2=f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv",,
+        maxbin2=f"{WORKDIR}/metagenomics/maxbin2/{{sample}}.tsv",
+        semibin2=f"{WORKDIR}/metagenomics/semibin2/{{sample}}.tsv",
+        fasta=f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna"
     output:
-        f"{OUTPUT_DIR}/cataloging/binette/{{assembly}}/final_bins_quality_reports.tsv"
+        f"{WORKDIR}/metagenomics/binette/final_bins_quality_reports.tsv"
     params:
         checkm_db = {CHECKM2_DB},
         diamond_module = {DIAMOND_MODULE},
         checkm2_module = {CHECKM2_MODULE},
         binette_module = {BINETTE_MODULE},
-        outdir=f"{OUTPUT_DIR}/cataloging/binette/{{assembly}}"
+        outdir=f"{OUTPUT_DIR}/cataloging/binette/{{sample}}"
     threads: 8
     conda:
         f"{PACKAGE_DIR}/workflow/envs/cataloging.yaml"
@@ -259,15 +248,13 @@ checkpoint binette:
 def get_bin_fna_sep(wildcards):
     checkpoint_output = checkpoints.binette.get(**wildcards).output[0]
     cluster_ids = get_bin_ids_from_tsv(checkpoint_output)
-    return f"{OUTPUT_DIR}/cataloging/binette/{{assembly}}/final_bins/bin_{wildcards.bin_id}.fa"
+    return f"{OUTPUT_DIR}/cataloging/binette/{{sample}}/final_bins/bin_{wildcards.bin_id}.fa"
 
 rule rename_bins:
     input:
         lambda wildcards: get_bin_fna_sep(wildcards)
     output:
-        f"{OUTPUT_DIR}/cataloging/final/{{assembly}}/{{assembly}}_bin_{{bin_id}}.fa"
-    params:
-        package_dir={PACKAGE_DIR}
+        f"{OUTPUT_DIR}/cataloging/binette/{{sample}}/final_bins/bin_{{bin_id}}.fa"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(1*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
