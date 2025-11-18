@@ -28,7 +28,7 @@ rule assembly:
     message: "Assembling {wildcards.sample}..."
     shell:
         """
-        module load {params.megahit_module}
+        module load megahit/1.2.9
         rm -rf {params.outputdir}
 
         megahit \
@@ -54,7 +54,7 @@ rule assembly_index:
     message: "Indexing assembly {wildcards.sample}..."
     shell:
         """
-        module load {params.bowtie2_module}
+        module load bowtie2/2.4.2
         bowtie2-build {input} {params.basename}
         """
 
@@ -74,7 +74,7 @@ rule assembly_map:
     message: "Mapping {wildcards.sample} reads to assembly..."
     shell:
         """
-        module load {params.bowtie2_module} {params.samtools_module}
+        module load bowtie2/2.4.2 samtools/1.21
         bowtie2 -x {params.basename} -1 {input.r1} -2 {input.r2} | samtools view -bS - | samtools sort -o {output}
         """
 
