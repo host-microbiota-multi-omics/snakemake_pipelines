@@ -88,5 +88,5 @@ nano 3_metagenomics.yaml
 ```sh
 screen -r hmmo
 module load snakemake/9.9.0
-snakemake -s 3_metagenomics.smk --cores 8 --profile .
+snakemake -s 3_microbial_metagenomics.smk --cores 8 --profile .
 ```
