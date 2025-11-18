@@ -9,6 +9,9 @@ READS = config["reads"]
 # List genome and target wildcards
 SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
+rule all:
+    input:
+        expand(f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna", sample=SAMPLES)
 
 rule assembly:
     input:
