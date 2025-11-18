@@ -13,9 +13,10 @@ SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
 rule all:
     input:
-        expand(f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz", sample=SAMPLES),
-        expand(f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz", sample=SAMPLES),
-        expand(f"{WORKDIR}/preprocessing/{{sample}}.bam", sample=SAMPLES)
+        expand(f"{WORKDIR}/preprocessing/final/{{sample}}_1.fq.gz", sample=SAMPLES),
+        expand(f"{WORKDIR}/preprocessing/final/{{sample}}_2.fq.gz", sample=SAMPLES),
+        expand(f"{WORKDIR}/preprocessing/final/{{sample}}.bam", sample=SAMPLES),
+        expand(f"{WORKDIR}/preprocessing/singlem/{{sample}}.fraction", sample=SAMPLES)
 
 rule fastp:
     input:
@@ -62,13 +63,13 @@ rule reference_index:
     output:
         index = f"{WORKDIR}/reference/{REF_BASENAME}.rev.1.bt2"
     params:
-        refdir = f"{WORKDIR}/reference/"
+        refdir = f"{WORKDIR}/reference/",
         basename = f"{WORKDIR}/reference/{REF_BASENAME}"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 20) * 2 ** (attempt - 1))
-    message: "Indexing reference genome {wildcards.reference}..."
+    message: "Indexing reference genome..."
     shell:
         """
         module load bowtie2/2.4.2
@@ -130,11 +131,11 @@ rule samtools_stats:
 
 rule split_reads:
     input:
-        f"{WORKDIR}/preprocessing/bowtie2/{{sample}}.bam"
+        rules.reference_map.output
     output:
-        r1=f"{WORKDIR}/preprocessing/{{sample}}_1.fq.gz",
-        r2=f"{WORKDIR}/preprocessing/{{sample}}_2.fq.gz",
-        bam=f"{WORKDIR}/preprocessing/{{sample}}.bam"
+        r1=f"{WORKDIR}/preprocessing/final/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/final/{{sample}}_2.fq.gz",
+        bam=f"{WORKDIR}/preprocessing/final/{{sample}}.bam"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
