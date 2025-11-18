@@ -1,0 +1,5 @@
+workdir: path
+reads: path
+
+#megahit
+min-contig-len: int
