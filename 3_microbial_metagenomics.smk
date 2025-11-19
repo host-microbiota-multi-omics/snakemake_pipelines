@@ -88,10 +88,10 @@ rule assembly_map_depth:
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: min(20000,max(15, int(input.size_mb / 100) * 2 ** (attempt - 1)))
-    message: "Calculating mapping states of assembly {wildcards.assembly}..."
+    message: "Calculating mapping states of assembly {wildcards.sample}..."
     shell:
         """
-        module load {params.metabat2_module}
+        module load metabat2/2.17
         jgi_summarize_bam_contig_depths --outputDepth {output.metabat2} {input}
         cut -f1,3 {output.metabat2} | tail -n+2 > {output.maxbin2}
         """
@@ -102,8 +102,6 @@ rule metabat2:
         depth=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_metabat.depth"
     output:
         f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv"
-    params:
-        metabat2_module={METABAT2_MODULE}
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 50) * 2 ** (attempt - 1)),
@@ -111,7 +109,7 @@ rule metabat2:
     message: "Binning contigs from assembly {wildcards.sample} using metabat2..."
     shell:
         """
-        module load {params.metabat2_module}
+        module load metabat2/2.17
         metabat2 -i {input.assembly} -a {input.depth} -o {output} -m 1500 --saveCls --noBinOut
         """
 
@@ -136,7 +134,7 @@ rule maxbin2:
             touch {output}
         else
             MODULEPATH=/opt/shared_software/shared_envmodules/modules:$MODULEPATH \
-            module load {params.maxbin2_module} {params.hmmer_module}
+            module load maxbin2/2.2.7 "hmmer/3.3.2
             rm -rf {params.basename}*
             run_MaxBin.pl -contig {input.assembly} -abund {input.depth} -max_iteration 10 -out {params.basename} -min_contig_length 1500
         fi
