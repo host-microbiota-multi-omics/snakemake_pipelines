@@ -11,7 +11,7 @@ SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
 rule all:
     input:
-        expand(f"{WORKDIR}/metagenomics/megahit/{{sample}}.fna", sample=SAMPLES)
+        expand(f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam", sample=SAMPLES)
 
 rule assembly:
     input:
@@ -66,7 +66,7 @@ rule assembly_map:
     output:
         f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam"
     params:
-        basename=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}
+        basename=f"{WORKDIR}/metagenomics/megahit/{{sample}}"
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 3) * 2 ** (attempt - 1)),
