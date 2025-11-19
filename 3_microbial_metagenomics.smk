@@ -11,7 +11,8 @@ SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
 rule all:
     input:
-        expand(f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_maxbin.depth", sample=SAMPLES)
+        expand(f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv", sample=SAMPLES),
+        expand(f"{WORKDIR}/metagenomics/maxbin2/{{sample}}.summary", sample=SAMPLES)
 
 rule assembly:
     input:
@@ -120,8 +121,7 @@ rule maxbin2:
     output:
          f"{WORKDIR}/metagenomics/maxbin2/{{sample}}.summary"
     params:
-        basename=f"{WORKDIR}/metagenomics/maxbin2/{{sample}}",
-        assembly_size_mb=lambda wildcards, input: int(Path(input.assembly).stat().st_size / (1024*1024))
+        basename=f"{WORKDIR}/metagenomics/maxbin2/{{sample}}"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 50) * 2 ** (attempt - 1)),
@@ -129,15 +129,9 @@ rule maxbin2:
     message: "Binning contigs from assembly {wildcards.sample} using maxbin2..."
     shell:
         """
-        if (( {params.assembly_size_mb} < 10 )); then
-            echo "Assembly is smaller than 10 MB, skipping maxbin2..."
-            touch {output}
-        else
-            MODULEPATH=/opt/shared_software/shared_envmodules/modules:$MODULEPATH \
-            module load maxbin2/2.2.7 "hmmer/3.3.2
-            rm -rf {params.basename}*
-            run_MaxBin.pl -contig {input.assembly} -abund {input.depth} -max_iteration 10 -out {params.basename} -min_contig_length 1500
-        fi
+        module load maxbin2/2.2.7 hmmer/3.3.2
+        rm -rf {params.basename}*
+        run_MaxBin.pl -contig {input.assembly} -abund {input.depth} -max_iteration 10 -out {params.basename} -min_contig_length 1500
         """
 
 rule semibin2:
@@ -147,8 +141,7 @@ rule semibin2:
     output:
         f"{WORKDIR}/metagenomics/semibin2/{{sample}}/contig_bins.tsv"
     params:
-        outdir=f"{WORKDIR}/metagenomics/semibin2/{{sample}}",
-        assembly_size_mb=lambda wildcards, input: int(Path(input.assembly).stat().st_size / (1024*1024))
+        outdir=f"{WORKDIR}/metagenomics/semibin2/{{sample}}"
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: min(1000*1024,max(8*1024, int(input.size_mb * 30) * 2 ** (attempt - 1))),
@@ -156,13 +149,8 @@ rule semibin2:
     message: "Binning contigs from assembly {wildcards.sample} using semibin2..."
     shell:
         """
-        if (( {params.assembly_size_mb} < 10 )); then
-            echo "Assembly is smaller than 10 MB, skipping semibin2..."
-            touch {output}
-        else
-            module load {params.semibin2_module} {params.bedtools_module} {params.hmmer_module}
-            SemiBin2 single_easy_bin -i {input.assembly} -b {input.bam} -o {params.outdir} -m 1500 -t {threads} --compression none
-        fi
+        module load {params.semibin2_module} {params.bedtools_module} {params.hmmer_module}
+        SemiBin2 single_easy_bin -i {input.assembly} -b {input.bam} -o {params.outdir} -m 1500 -t {threads} --compression none
         """
 
 rule semibin2_table:
