@@ -11,7 +11,7 @@ SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
 rule all:
     input:
-        expand(f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam", sample=SAMPLES)
+        expand(f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_maxbin.depth", sample=SAMPLES)
 
 rule assembly:
     input:
