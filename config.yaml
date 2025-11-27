@@ -9,6 +9,7 @@ slurm:
     extra: "--nodelist=mjolnircomp15fl --reservation=course_1 --account=teaching"
 
 default-resources:
+    slurm_extra: "--nodelist=mjolnircomp15fl --reservation=course_1 --account=teaching"
     mem_mb: 8 * 1024
     runtime: 10 * 2 ** (attempt - 1)
 max-threads: 8
