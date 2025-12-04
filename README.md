@@ -60,14 +60,6 @@ wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pip
 nano 2_genomics.yaml
 ```
 
-### Download the wrappers
-
-When executing Snakemake with wrappers, the server tries to download the corresponding wrapper every time it is executed, resulting in hundreds of simultaneous connections between Mjolnir and Github, where the wrappers are stored. To avoid connection issues, it is best to download the wrappers to the working directory beforehand, and tell snakemake where to find the wrappers.
-
-```sh
-git clone --depth 1 --branch v7.2.0 https://github.com/snakemake/snakemake-wrappers.git  wrappers/v7.2.0
-```
-
 ### Execute the pipeline
 
 ```sh

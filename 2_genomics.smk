@@ -18,8 +18,8 @@ rule bam_to_fastq:
     input:
         f"{BAMS}/{{sample}}.bam"
     output:
-        r1="{WORKDIR}/genomics/reads/{{sample}}_1.fq",
-        r2="{WORKDIR}/genomics/reads/{{sample}}_2.fq"
+        r1=f"{WORKDIR}/genomics/reads/{{sample}}_1.fq",
+        r2=f"{WORKDIR}/genomics/reads/{{sample}}_2.fq"
     threads: 4
     params:
         collate="",
@@ -27,15 +27,18 @@ rule bam_to_fastq:
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 20) * 2 ** (attempt - 1))
-    wrapper:
-        "v7.2.0/bio/samtools/fastq/separate"
+    shell:
+        """
+        module load samtools/1.21
+        samtools collate -u -O {input} | samtools fastq -1 {output.r1} -2 {output.r2}
+        """
 
 rule simplify_reads:
     input:
-        r1="{WORKDIR}/genomics/reads/{{sample}}_1.fq",
-        r2="{WORKDIR}/genomics/reads/{{sample}}_2.fq"
+        r1=f"{WORKDIR}/genomics/reads/{{sample}}_1.fq",
+        r2=f"{WORKDIR}/genomics/reads/{{sample}}_2.fq"
     output:
-        "{WORKDIR}/genomics/reads/{{sample}}/{{sample}}.fq"
+        f"{WORKDIR}/genomics/reads/{{sample}}/{{sample}}.fq"
     threads: 1
     localrule: True
     shell:
@@ -46,20 +49,19 @@ rule simplify_reads:
 
 rule skmer_reference:
     input:
-        "{WORKDIR}/genomics/reads/{{sample}}/{{sample}}.fq"
+        f"{WORKDIR}/genomics/reads/{{sample}}/{{sample}}.fq"
     output:
-        "{WORKDIR}/genomics/skmer/{{sample}}/{{sample}}.dat"
+        f"{WORKDIR}/genomics/skmer/{{sample}}/{{sample}}.dat"
     threads: 1
-    conda:
-        "envs/skmer.yml"
     params:
-        inputdir="reads/{sample}",
-        outputbase="library"
+        inputdir=f"{WORKDIR}/genomics/reads/{{sample}}",
+        outputbase="skmer"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 60) * 2 ** (attempt - 1))
     shell:
         """
+        module load skmer/3.3.0
         skmer reference {params.inputdir} -p {threads} -l {params.outputbase}
         """
 
@@ -69,16 +71,15 @@ rule skmer_distance:
     output:
         f"{WORKDIR}/genomics/distance_matrix.txt"
     threads: 1
-    conda:
-        "envs/skmer.yml"
     params:
-        inputdir="library",
+        inputdir=f"{WORKDIR}/genomics/skmer",
         outputbase="distance_matrix"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(64*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 50) * 2 ** (attempt - 1))
     shell:
         """
+        module load skmer/3.3.0
         skmer distance {params.inputdir} -p {threads} -o {params.outputbase}
         """
 
