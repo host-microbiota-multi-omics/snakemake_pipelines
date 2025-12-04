@@ -114,7 +114,7 @@ rule skmer_heatmap:
         outputbase="distance_matrix"
     resources:
         mem_mb=lambda wildcards, input, attempt: 4*1024,
-        runtime=lambda wildcards, input, attempt: 10
+        runtime=lambda wildcards, input, attempt: 60
     shell:
         """
         python /projects/course_1/apps/heatmap_from_distance.py --dist {input} --out {output}
