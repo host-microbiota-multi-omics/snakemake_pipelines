@@ -91,13 +91,13 @@ module load snakemake/9.9.0 miniconda/py39_25.9.1-1
 snakemake -s 3_metagenomics.smk --cores 8 --profile .
 ```
 
-## 4. Microbial metagenomics annotation
+## 4. Microbial metagenomics (continuation)
 
 ### Get the code
 
 ```sh
-wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/4_annotation.smk
-wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/4_annotation.yaml
+wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/4_metagenomics2.smk
+wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/4_metagenomics2.yaml
 ```
 
 ### Prepare the config file
@@ -111,5 +111,5 @@ nano 3_metagenomics.yaml
 ```sh
 screen -r hmmo
 module load snakemake/9.9.0 miniconda/py39_25.9.1-1
-snakemake -s 3_metagenomics.smk --cores 8 --profile .
+snakemake -s 4_metagenomics2.smk --cores 8 --profile .
 ```
