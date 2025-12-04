@@ -3,6 +3,7 @@ jobs: 20
 latency-wait: 300
 rerun-incomplete: true
 keep-going: true
+use-conda: true
 retries: 3
 
 default-resources:
