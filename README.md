@@ -62,9 +62,11 @@ nano 2_genomics.yaml
 
 ### Execute the pipeline
 
+The genomics pipeline require activatind conda environments that contain the software needed to conduct some of the steps. Therefore, it is necessary to load miniconda module in addition to snakemake for this pipeline to work.
+
 ```sh
 screen -r hmmo
-module load snakemake/9.9.0
+module load snakemake/9.9.0 miniconda/py39_25.9.1-1
 snakemake -s 2_genomics.smk --cores 8 --profile .
 ```
 
