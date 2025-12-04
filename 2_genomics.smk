@@ -71,7 +71,7 @@ rule skmer_distance:
     threads: 1
     params:
         inputdir=f"{WORKDIR}/genomics/skmer",
-        outputbase="distance_matrix"
+        outputbase=f"{WORKDIR}/genomics/skmer/distance_matrix"
     conda: 
         "/projects/course_1/apps/skmer"
     resources:
