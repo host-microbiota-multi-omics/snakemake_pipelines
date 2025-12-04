@@ -9,6 +9,11 @@ BAMS = config["bams"]
 # List genome and target wildcards
 SAMPLES, = glob_wildcards(f"{BAMS}/{{sample}}.bam")
 
+rule all:
+    input:
+        f"{WORKDIR}/genomics/pcoa.png",
+        f"{WORKDIR}/genomics/heatmap.png"
+
 rule bam_to_fastq:
     input:
         f"{BAMS}/{{sample}}.bam"
@@ -101,7 +106,7 @@ rule skmer_heatmap:
     input:
         f"{WORKDIR}/genomics/distance_matrix.txt"
     output:
-        f"heatmap.png"
+        f"{WORKDIR}/genomics/heatmap.png"
     threads: 1
     conda:
         "envs/plot.yml"
