@@ -21,9 +21,6 @@ rule bam_to_fastq:
         r1=f"{WORKDIR}/genomics/reads/{{sample}}_1.fq",
         r2=f"{WORKDIR}/genomics/reads/{{sample}}_2.fq"
     threads: 4
-    params:
-        collate="",
-        fastq="-n",
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 20) * 2 ** (attempt - 1))
@@ -56,6 +53,8 @@ rule skmer_reference:
     params:
         inputdir=f"{WORKDIR}/genomics/reads/{{sample}}",
         outputbase="skmer"
+    conda: 
+        "/projects/course_1/apps/skmer"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 60) * 2 ** (attempt - 1))
@@ -74,6 +73,8 @@ rule skmer_distance:
     params:
         inputdir=f"{WORKDIR}/genomics/skmer",
         outputbase="distance_matrix"
+    conda: 
+        "/projects/course_1/apps/skmer"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(64*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 50) * 2 ** (attempt - 1))
@@ -91,8 +92,8 @@ rule skmer_pcoa:
     log:
         "logs/skmer/pcoa.log"
     threads: 1
-    conda:
-        "envs/plot.yml"
+    conda: 
+        "/projects/course_1/apps/plotting"
     params:
         outputbase="distance_matrix"
     resources:
@@ -100,7 +101,7 @@ rule skmer_pcoa:
         runtime=lambda wildcards, input, attempt: 5
     shell:
         """
-        python workflow/scripts/pcoa_from_distance.py --dist {input} --out-prefix pcoa
+        python /projects/course_1/apps/pcoa_from_distance.py --dist {input} --out-prefix pcoa
         """
 
 rule skmer_heatmap:
@@ -109,8 +110,8 @@ rule skmer_heatmap:
     output:
         f"{WORKDIR}/genomics/heatmap.png"
     threads: 1
-    conda:
-        "envs/plot.yml"
+    conda: 
+        "/projects/course_1/apps/plotting"
     params:
         outputbase="distance_matrix"
     resources:
@@ -118,5 +119,5 @@ rule skmer_heatmap:
         runtime=lambda wildcards, input, attempt: 5
     shell:
         """
-        python workflow/scripts/heatmap_from_distance.py --dist {input} --out {output}
+        python /projects/course_1/apps/heatmap_from_distance.py --dist {input} --out {output}
         """
