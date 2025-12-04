@@ -93,13 +93,13 @@ rule skmer_pcoa:
     conda: 
         "/projects/course_1/apps/plotting"
     params:
-        outputbase="distance_matrix"
+        outputbase=f"{WORKDIR}/genomics/pcoa"
     resources:
         mem_mb=lambda wildcards, input, attempt: 4*1024,
-        runtime=lambda wildcards, input, attempt: 10
+        runtime=lambda wildcards, input, attempt: 15
     shell:
         """
-        python /projects/course_1/apps/pcoa_from_distance.py --dist {input} --out-prefix pcoa
+        python /projects/course_1/apps/pcoa_from_distance.py --dist {input} --out-prefix {params.outputbase}
         """
 
 rule skmer_heatmap:
@@ -114,7 +114,7 @@ rule skmer_heatmap:
         outputbase="distance_matrix"
     resources:
         mem_mb=lambda wildcards, input, attempt: 4*1024,
-        runtime=lambda wildcards, input, attempt: 60
+        runtime=lambda wildcards, input, attempt: 15
     shell:
         """
         python /projects/course_1/apps/heatmap_from_distance.py --dist {input} --out {output}
