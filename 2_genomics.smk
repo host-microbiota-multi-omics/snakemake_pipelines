@@ -76,7 +76,7 @@ rule skmer_distance:
         "/projects/course_1/apps/skmer"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(64*1024, int(input.size_mb * 10) * 2 ** (attempt - 1)),
-        runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 50) * 2 ** (attempt - 1))
+        runtime=lambda wildcards, input, attempt: max(30, int(input.size_mb / 50) * 2 ** (attempt - 1))
     shell:
         """
         skmer distance {params.inputdir} -p {threads} -o {params.outputbase}
