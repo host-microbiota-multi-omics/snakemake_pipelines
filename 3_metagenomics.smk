@@ -115,7 +115,7 @@ rule metabat2:
         metabat2 -i {input.assembly} -a {input.depth} -o {params.basename} -m 1500 --saveCls
 
         # Generate summary file for dRep
-        find "$(dirname {params.basename})" -maxdepth 1 -type f -name "*$(basename {params.basename})_*.fa" | sort > {output}
+        find "$(dirname {params.basename})" -maxdepth 1 -type f -name "*$(basename {params.basename}).*.fa" | sort > {output}
         """
 
 rule checkm:
