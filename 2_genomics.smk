@@ -60,7 +60,6 @@ rule skmer_reference:
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 60) * 2 ** (attempt - 1))
     shell:
         """
-        module load skmer/3.3.0
         skmer reference {params.inputdir} -p {threads} -l {params.outputbase}
         """
 
@@ -80,7 +79,6 @@ rule skmer_distance:
         runtime=lambda wildcards, input, attempt: max(15, int(input.size_mb / 50) * 2 ** (attempt - 1))
     shell:
         """
-        module load skmer/3.3.0
         skmer distance {params.inputdir} -p {threads} -o {params.outputbase}
         """
 
