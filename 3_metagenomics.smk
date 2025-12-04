@@ -11,7 +11,7 @@ SAMPLES, = glob_wildcards(f"{READS}/{{sample}}_1.fq.gz")
 
 rule all:
     input:
-        expand(f"{WORKDIR}/metagenomics/drep/{{sample}}/data_tables/genomeInformation.csv", sample=SAMPLES)
+        f"{WORKDIR}/metagenomics/drep/data_tables/genomeInformation.csv"
 
 rule assembly:
     input:
@@ -141,15 +141,31 @@ rule checkm:
         awk -F'\t' 'BEGIN{{OFS=","}} NR==1{{print "genome","completeness","contamination"; next}} {{print $1".fna",$2,$3}}' {params.outdir}/quality_report.tsv > {output}
         """
 
+rule merge_drep_inputs:
+    input:
+        genomes=expand(f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv", sample=SAMPLES),
+        genomeinfo=expand(f"{WORKDIR}/metagenomics/checkm2/{{sample}}.tsv", sample=SAMPLES)
+    output:
+        merged_genomes=f"{WORKDIR}/metagenomics/drep/genomes.tsv",
+        merged_genomeinfo=f"{WORKDIR}/metagenomics/drep/genomeInformation.csv"
+    shell:
+        """
+        mkdir -p $(dirname {output.merged_genomes})
+
+        cat {input.genomes} > {output.merged_genomes}
+
+        # Keep header once while stacking genome info files
+        awk 'FNR==1 && NR!=1 {{next}} {{print}}' {input.genomeinfo} > {output.merged_genomeinfo}
+        """
+
 rule drep:
     input:
-        genomes=f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv",
-        genomeinfo=f"{WORKDIR}/metagenomics/checkm2/{{sample}}.tsv"
+        genomes=f"{WORKDIR}/metagenomics/drep/genomes.tsv",
+        genomeinfo=f"{WORKDIR}/metagenomics/drep/genomeInformation.csv"
     output:
-        f"{WORKDIR}/metagenomics/drep/{{sample}}/data_tables/genomeInformation.csv"
+        f"{WORKDIR}/metagenomics/drep/data_tables/genomeInformation.csv"
     params:
-        bins_dir=lambda wildcards: f"{WORKDIR}/metagenomics/metabat2/{wildcards.sample}",
-        outdir=f"{WORKDIR}/metagenomics/drep/{{sample}}"
+        outdir=f"{WORKDIR}/metagenomics/drep"
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: max(64*1024, int(input.size_mb * 1000) * 2 ** (attempt - 1)),
@@ -158,5 +174,5 @@ rule drep:
         """
         module load drep/3.6.2 fastani/1.33 mash/2.3
         rm -rf {params.outdir}
-        dRep dereplicate {params.outdir} -g {input.genomes} -p {threads} -pa 0.95 --genomeInfo {input.genomeinfo}
+        dRep dereplicate {params.outdir} -g $(tr '\n' ' ' < {input.genomes}) -p {threads} -pa 0.95 --genomeInfo {input.genomeinfo}
         """
