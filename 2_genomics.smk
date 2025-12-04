@@ -52,7 +52,7 @@ rule skmer_reference:
     threads: 1
     params:
         inputdir=f"{WORKDIR}/genomics/reads/{{sample}}",
-        outputbase="skmer"
+        outputbase=f"{WORKDIR}/genomics/skmer"
     conda: 
         "/projects/course_1/apps/skmer"
     resources:
