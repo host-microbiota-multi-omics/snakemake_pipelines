@@ -1,6 +1,6 @@
 import os
 
-configfile: "4_annotations.yaml"
+configfile: "4_metagenomics2.yaml"
 
 # Config variables
 WORKDIR = config["workdir"]
