@@ -1,6 +1,6 @@
 import os
 
-configfile: "1_preprocessing.yaml"
+configfile: "2_host_genomics.yaml"
 
 # Config variables
 WORKDIR = config["workdir"]

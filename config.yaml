@@ -5,9 +5,6 @@ rerun-incomplete: true
 keep-going: true
 retries: 3
 
-slurm:
-    extra: "--nodelist=mjolnircomp15fl --reservation=course_1 --account=teaching"
-
 default-resources:
     slurm_extra: "--nodelist=mjolnircomp15fl --reservation=course_1 --account=teaching"
     mem_mb: 8 * 1024
