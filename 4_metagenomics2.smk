@@ -81,7 +81,7 @@ rule map_reads_to_catalogue:
     threads: 4
     resources:
         mem_mb=lambda wildcards, input, attempt: max(16*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
-        runtime=lambda wildcards, input, attempt: max(30, int(input.size_mb / 100) * 2 ** (attempt - 1))
+        runtime=lambda wildcards, input, attempt: max(60, int(input.size_mb / 30) * 2 ** (attempt - 1))
     shell:
         """
         module load bowtie2/2.4.2 samtools/1.21
