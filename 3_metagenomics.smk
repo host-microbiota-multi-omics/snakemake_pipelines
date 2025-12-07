@@ -138,7 +138,7 @@ rule checkm:
         checkm2 predict -i {params.bins_dir}/*.fa -o {params.outdir} -t {threads} --database_path /maps/datasets/globe_databases/checkm2/20250215/CheckM2_database/uniref100.KO.1.dmnd
 
         # Prepare genome info for drep
-        awk -F'\t' 'BEGIN{{OFS=","}} NR==1{{print "genome","completeness","contamination"; next}} {{print $1".fna",$2,$3}}' {params.outdir}/quality_report.tsv > {output}
+        awk -F'\t' 'BEGIN{{OFS=","}} NR==1{{print "genome","completeness","contamination"; next}} {{print $1".fa",$2,$3}}' {params.outdir}/quality_report.tsv > {output}
         """
 
 rule merge_drep_inputs:
@@ -146,8 +146,8 @@ rule merge_drep_inputs:
         genomes=expand(f"{WORKDIR}/metagenomics/metabat2/{{sample}}.tsv", sample=SAMPLES),
         genomeinfo=expand(f"{WORKDIR}/metagenomics/checkm2/{{sample}}.tsv", sample=SAMPLES)
     output:
-        merged_genomes=f"{WORKDIR}/metagenomics/drep/genomes.tsv",
-        merged_genomeinfo=f"{WORKDIR}/metagenomics/drep/genomeInformation.csv"
+        merged_genomes=f"{WORKDIR}/metagenomics/genomes.tsv",
+        merged_genomeinfo=f"{WORKDIR}/metagenomics/genomeInformation.csv"
     shell:
         """
         mkdir -p $(dirname {output.merged_genomes})
@@ -160,8 +160,8 @@ rule merge_drep_inputs:
 
 rule drep:
     input:
-        genomes=f"{WORKDIR}/metagenomics/drep/genomes.tsv",
-        genomeinfo=f"{WORKDIR}/metagenomics/drep/genomeInformation.csv"
+        genomes=f"{WORKDIR}/metagenomics/genomes.tsv",
+        genomeinfo=f"{WORKDIR}/metagenomics/genomeInformation.csv"
     output:
         f"{WORKDIR}/metagenomics/drep/data_tables/genomeInformation.csv"
     params:
@@ -169,10 +169,10 @@ rule drep:
     threads: 8
     resources:
         mem_mb=lambda wildcards, input, attempt: max(64*1024, int(input.size_mb * 1000) * 2 ** (attempt - 1)),
-        runtime=lambda wildcards, input, attempt: min(20000, max(15, int(input.size_mb * 100) * 2 ** (attempt - 1)))
+        runtime=lambda wildcards, input, attempt: min(20000, max(90, int(input.size_mb * 100) * 2 ** (attempt - 1)))
     shell:
         """
         module load drep/3.6.2 fastani/1.33 mash/2.3
         rm -rf {params.outdir}
-        dRep dereplicate {params.outdir} -g $(tr '\n' ' ' < {input.genomes}) -p {threads} -pa 0.95 --genomeInfo {input.genomeinfo}
+        dRep dereplicate {params.outdir} -g {input.genomes} -p {threads} -pa 0.95 --genomeInfo {input.genomeinfo}
         """

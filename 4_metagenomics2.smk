@@ -46,14 +46,17 @@ rule concatenate_catalogue:
         runtime=lambda wildcards, attempt: 120 * 2 ** (attempt - 1)
     shell:
         """
-        cat {params.bindir}/*.fna > {output}
+        for f in {params.bindir}/*.fa; do
+            prefix=$(basename "$f" .fa)
+            awk -v p="$prefix" 'BEGIN{{OFS=""}} /^>/ {{sub(/^>/, ">"p"^", $0)}} {{print}}' "$f"
+        done > {output}
         """
 
 rule index_catalogue:
     input:
         f"{WORKDIR}/metagenomics/catalogue/catalogue.fna"
     output:
-        f"{WORKDIR}/metagenomics/catalogue/catalogue.fna.bt2"
+        f"{WORKDIR}/metagenomics/catalogue/catalogue.1.bt2"
     params:
         basename = f"{WORKDIR}/metagenomics/catalogue/catalogue"
     threads: 1
@@ -70,9 +73,11 @@ rule map_reads_to_catalogue:
     input:
         r1=f"{WORKDIR}/preprocessing/final/{{sample}}_1.fq.gz",
         r2=f"{WORKDIR}/preprocessing/final/{{sample}}_2.fq.gz",
-        index=f"{WORKDIR}/metagenomics/catalogue/catalogue.fna.bt2"
+        index=f"{WORKDIR}/metagenomics/catalogue/catalogue.1.bt2"
     output:
         bam=f"{WORKDIR}/metagenomics/mapping/{{sample}}.bam"
+    params:
+        index=f"{WORKDIR}/metagenomics/catalogue/catalogue",
     threads: 4
     resources:
         mem_mb=lambda wildcards, input, attempt: max(16*1024, int(input.size_mb * 5) * 2 ** (attempt - 1)),
@@ -80,12 +85,12 @@ rule map_reads_to_catalogue:
     shell:
         """
         module load bowtie2/2.4.2 samtools/1.21
-        bowtie2 -x {input.index} -1 {input.r1} -2 {input.r2} -p {threads} | samtools view -b -@ {threads} -o {output.bam} -
+        bowtie2 -x {params.index} -1 {input.r1} -2 {input.r2} -p {threads} | samtools view -bS - | samtools sort -o {output.bam}
         """
 
 rule quantify_reads_catalogue:
     input:
-        expand(f"{WORKDIR}/metagenomics/mapping/{{sample}}.bam", sample=samples)
+        expand(f"{WORKDIR}/metagenomics/mapping/{{sample}}.bam", sample=SAMPLES)
     output:
         f"{WORKDIR}/metagenomics/coverm/coverm.tsv"
     threads: 8
