@@ -116,7 +116,7 @@ module load snakemake/9.9.0 miniconda/py39_25.9.1-1
 snakemake -s 4_metagenomics2.smk --cores 8 --profile .
 ```
 
-## 4. Microbial metagenomics (MAG annotation)
+## 5. Microbial metagenomics (MAG annotation)
 
 ### Get the code
 
