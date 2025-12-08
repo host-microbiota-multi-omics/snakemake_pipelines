@@ -136,5 +136,5 @@ nano 5_metagenomics3.yaml
 ```sh
 screen -r hmmo
 module load snakemake/9.9.0 miniconda/py39_25.9.1-1
-snakemake -s 4_metagenomics3.smk --cores 8 --profile .
+snakemake -s 5_metagenomics3.smk --cores 8 --profile .
 ```
