@@ -20,9 +20,10 @@ rule gtdbtk:
     resources:
         mem_mb=lambda wildcards, attempt: 128*1024 * 2 ** (attempt - 1),
         runtime=lambda wildcards, attempt: 120 * 2 ** (attempt - 1)
+    conda:
+        "/projects/alberdilab/data/environments/drakkar/afdf1f313a19f553d72dc129bb35c2f8_"
     shell:
         """
-        module load gtdbtk/2.2.6
         export GTDBTK_DATA_PATH=/datasets/globe_databases/gtdbtk_db/20241001
         gtdbtk classify_wf \
             --genome_dir {params.bindir} \
