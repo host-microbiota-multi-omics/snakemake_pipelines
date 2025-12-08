@@ -22,8 +22,8 @@ rule concatenate_catalogue:
         bindir=BINS
     threads: 4
     resources:
-        mem_mb=lambda wildcards, attempt: 128*1024 * 2 ** (attempt - 1),
-        runtime=lambda wildcards, attempt: 120 * 2 ** (attempt - 1)
+        mem_mb=8 * 1024,
+        runtime=15
     shell:
         """
         for f in {params.bindir}/*.fa; do
