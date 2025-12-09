@@ -12,7 +12,7 @@ MAGS, = glob_wildcards(f"{BINDIR}/{{mag}}.fa")
 rule all:
     input:
         f"{WORKDIR}/metagenomics/gtdbtk/classify/gtdbtk.bac120.summary.tsv",
-        expand(f"{WORKDIR}/metagenomics/kegg/{{mag}}.tsv", mag=MAGS)
+        f"{WORKDIR}/metagenomics/kegg_merged.tsv"
 
 rule gtdbtk:
     output:
@@ -65,10 +65,38 @@ rule kegg:
         db="/projects/alberdilab/data/databases/drakkar/kofams"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 1024 * 4) * 2 ** (attempt - 1)),
-        runtime=lambda wildcards, input, attempt: max(20, int(input.size_mb * 60) * 2 ** (attempt - 1))
+        runtime=lambda wildcards, input, attempt: max(20, int(input.size_mb * 100) * 2 ** (attempt - 1))
     threads: 1
     shell:
         """
         module load hmmer/3.3.2
         hmmscan -o {output.txt} --tblout {output.tsv} -E 1e-10 --noali {params.db} {input}
         """
+
+rule merge_kegg:
+    input:
+        expand(f"{WORKDIR}/metagenomics/kegg/{{mag}}.tsv", mag=MAGS)
+    output:
+        f"{WORKDIR}/metagenomics/kegg_merged.tsv"
+    run:
+        from pathlib import Path
+        out_path = Path(output[0])
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        records = []
+        for tsv in input:
+            with open(tsv, "r") as fh:
+                for line in fh:
+                    if not line or line.startswith("#"):
+                        continue
+                    fields = line.split()
+                    if len(fields) >= 5:
+                        ko = fields[0]
+                        gene = fields[2]
+                        evalue = fields[4]
+                        records.append((gene, ko, evalue))
+
+        with open(out_path, "w") as out_fh:
+            out_fh.write("gene\tKO\te_value\n")
+            for gene, ko, evalue in records:
+                out_fh.write(f"{gene}\t{ko}\t{evalue}\n")
