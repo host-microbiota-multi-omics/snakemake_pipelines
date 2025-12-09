@@ -148,10 +148,27 @@ rule split_reads:
         samtools view -b -F12 -@ {threads} {input} | samtools sort -@ {threads} -o {output.bam} -
         """
 
-rule singlem:
-    input: 
+rule unique_headers:
+    input:
         r1=f"{WORKDIR}/preprocessing/fastp/{{sample}}_1.fq.gz",
         r2=f"{WORKDIR}/preprocessing/fastp/{{sample}}_2.fq.gz"
+    output:
+        r1=f"{WORKDIR}/preprocessing/fastp_unique/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp_unique/{{sample}}_2.fq.gz"
+    threads: 1
+    message:
+        "Ensuring unique read headers for {wildcards.sample}..."
+    shell:
+        """
+        mkdir -p $(dirname {output.r1})
+        zcat {input.r1} | awk -v s="{wildcards.sample}" 'NR%4==1 {{c++; $0="@"s"^"c"/1"}} {{print}}' | gzip > {output.r1}
+        zcat {input.r2} | awk -v s="{wildcards.sample}" 'NR%4==1 {{c++; $0="@"s"^"c"/2"}} {{print}}' | gzip > {output.r2}
+        """
+
+rule singlem:
+    input: 
+        r1=f"{WORKDIR}/preprocessing/fastp_unique/{{sample}}_1.fq.gz",
+        r2=f"{WORKDIR}/preprocessing/fastp_unique/{{sample}}_2.fq.gz"
     output:
         f"{WORKDIR}/preprocessing/singlem/{{sample}}.profile"
     params:
