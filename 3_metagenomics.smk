@@ -82,8 +82,7 @@ rule assembly_map_depth:
     input:
         f"{WORKDIR}/metagenomics/bowtie2/{{sample}}.bam"
     output:
-        metabat2=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_metabat.depth",
-        maxbin2=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_maxbin.depth"
+        metabat2=f"{WORKDIR}/metagenomics/bowtie2/{{sample}}_metabat.depth"
     threads: 1
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb) * 2 ** (attempt - 1)),
