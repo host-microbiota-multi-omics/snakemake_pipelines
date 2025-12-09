@@ -62,7 +62,7 @@ rule kegg:
         txt=f"{WORKDIR}/metagenomics/kegg/{{mag}}.txt",
         tsv=f"{WORKDIR}/metagenomics/kegg/{{mag}}.tsv"
     params:
-        db="/projects/alberdilab/data/databases/drakkar/kofams"
+        db="/projects/course_1/apps/kofams"
     resources:
         mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 1024 * 4) * 2 ** (attempt - 1)),
         runtime=lambda wildcards, input, attempt: max(20, int(input.size_mb * 100) * 2 ** (attempt - 1))
