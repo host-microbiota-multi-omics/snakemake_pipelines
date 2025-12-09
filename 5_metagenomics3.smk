@@ -46,13 +46,13 @@ rule prodigal:
         aa=f"{WORKDIR}/metagenomics/prodigal/{{mag}}.faa"
     threads: 1
     resources:
-        mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 1024 * 4) * 2 ** (attempt - 1)),
-        runtime=lambda wildcards, input, attempt: max(10, int(input.size_mb * 60) * 2 ** (attempt - 1))
+        mem_mb=lambda wildcards, input, attempt: max(8*1024, int(input.size_mb * 1024) * 2 ** (attempt - 1)),
+        runtime=lambda wildcards, input, attempt: max(10, int(input.size_mb * 10) * 2 ** (attempt - 1))
     shell:
-        """
+        """module 
         mkdir -p $(dirname {output.gff})
-        module load prodigal/2.6.3
-        prodigal -i {input} -o {output.gff} -d {output.nt} -a {output.paaoteins} -p single
+        module load pprodigal/1.0.1
+        prodigal -i {input} -o {output.gff} -d {output.nt} -a {output.aa} -p single
         """
 
 rule kegg:
