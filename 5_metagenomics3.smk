@@ -85,6 +85,7 @@ rule merge_kegg:
 
         records = []
         for tsv in input:
+            mag = Path(tsv).stem
             with open(tsv, "r") as fh:
                 for line in fh:
                     if not line or line.startswith("#"):
@@ -94,9 +95,9 @@ rule merge_kegg:
                         ko = fields[0]
                         gene = fields[2]
                         evalue = fields[4]
-                        records.append((gene, ko, evalue))
+                        records.append((mag, gene, ko, evalue))
 
         with open(out_path, "w") as out_fh:
-            out_fh.write("gene\tKO\te_value\n")
-            for gene, ko, evalue in records:
-                out_fh.write(f"{gene}\t{ko}\t{evalue}\n")
+            out_fh.write("mag\tgene\tKO\te_value\n")
+            for mag, gene, ko, evalue in records:
+                out_fh.write(f"{mag}\t{gene}\t{ko}\t{evalue}\n")
