@@ -118,6 +118,15 @@ snakemake -s 4_metagenomics2.smk --cores 8 --profile .
 
 ## 5. Microbial metagenomics (MAG annotation)
 
+### Create the gtdbtk environment in your working directory
+
+```sh
+mkdir environment
+cd environment
+wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/environments/gtdbtk.yaml
+cd ..
+```
+
 ### Get the code
 
 ```sh
@@ -125,7 +134,7 @@ wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pip
 wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/5_metagenomics3.yaml
 ```
 
-### Prepare the config file
+### Prepare the config file with the paths
 
 ```sh
 nano 5_metagenomics3.yaml
