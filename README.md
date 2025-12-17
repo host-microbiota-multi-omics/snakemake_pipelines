@@ -121,8 +121,8 @@ snakemake -s 4_metagenomics2.smk --cores 8 --profile .
 ### Create the gtdbtk environment in your working directory
 
 ```sh
-mkdir environment
-cd environment
+mkdir environments
+cd environments
 wget https://raw.githubusercontent.com/host-microbiota-multi-omics/snakemake_pipelines/refs/heads/main/environments/gtdbtk.yaml
 cd ..
 ```
