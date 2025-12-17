@@ -25,7 +25,7 @@ rule gtdbtk:
         mem_mb=lambda wildcards, attempt: 128*1024 * 2 ** (attempt - 1),
         runtime=lambda wildcards, attempt: 120 * 2 ** (attempt - 1)
     conda:
-        "/environments/gtdbtk.yaml"
+        "environments/gtdbtk.yaml"
     shell:
         """
         export GTDBTK_DATA_PATH=/datasets/globe_databases/gtdbtk_db/20241001
